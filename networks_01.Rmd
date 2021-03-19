@@ -1,0 +1,274 @@
+---
+title: "Building corporate networks"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Displaying connections between companies, their directors and shareholders, is useful when investigating corruption, money laundering or illicit trade. Here you will find how to create interactive visualizations of corporate networks in R using [visNetwork](http://datastorm-open.github.io/visNetwork/).
+
+
+### Our first network: 'Twill Erin Ltd.'
+
+We will graph a corporate network, step by step, following an example. 'Twill Erin Ltd.' is a fictional company with 5 fictional officers. You have the information in a .csv file. 
+
+We will use tidyverse to wrangle our data and visNetwork to display it.
+
+```{r warning=FALSE,message=FALSE}
+library(visNetwork)
+library(tidyverse)
+```
+
+We load our data into a data frame called 'onecompany':
+
+```{r onecompanydata}
+onecompany <- read.csv("https://raw.githubusercontent.com/paraitepuy/networks/main/input_output/onecompany.csv", stringsAsFactors = FALSE)
+head(onecompany)
+```
+
+We adapt the data frame so we can use it with visNetwork. 
+
+```{r help, message=FALSE}
+help(visNetwork)
+```
+As we can see from 'help', we will need to build two data frames: one for **nodes** and one for **edges**. In this example, nodes are the names of our companies and people, and edges the relationship between them.
+
+To create the **NODES** data frame, we need a column with a unique 'id'. So we will create a data frame with all unique names of companies and people, and call that column 'id':
+
+```{r nodes}
+nodes <- data.frame(id = c(onecompany$companyname,onecompany$companyofficers)) %>%
+  unique()
+nodes
+```
+
+To create the **EDGES** data frame, we need to define the connections between nodes, so our data frame should contain at least two columns named 'from' and 'to'.
+
+```{r edges}
+edges <- data.frame(from = onecompany$companyofficers,
+                    to = onecompany$companyname)
+edges
+```
+
+You can already draw your first graph!
+
+```{r firstnetwork}
+visNetwork(nodes = nodes,
+           edges = edges)
+```
+
+Note that you can zoom in and out in the graph, as well as pull nodes around the graph.... but that graph does not clearly identify nodes and relationships, so we will add labels and titles. Labels will be text shown in your plot and titles will become visible in your plot when you hover over its corresponding edge or node. We'll add those labels and titles by adding columns to the nodes and edges data frames. 
+
+
+```{r attributes}
+nodes$label <- nodes$id #Label of the nodes will be the name of the companies and people 
+nodes
+
+edges$title <- onecompany$officerposition #Title of the edges will be the position of the officer
+edges
+
+```
+
+
+Draw your graph again: **It's done!**
+
+```{r secondnetwork}
+visNetwork(nodes = nodes,
+           edges = edges)
+```
+
+### Things to add to your network visualization.
+
+##### 1) Change colours
+
+For example, because in your financial crime investigation you want to draw attention to one of the directors: 'Tani, Monica'
+
+```{r colors}
+nodes$color <- ifelse(nodes$id=="Tani, Monica","#F2A918","#4C67BD") # We can write colors in hex code
+
+# By the way, note that your nodes data frame has more columns now
+nodes
+
+visNetwork(nodes = nodes,
+           edges = edges)
+```
+
+##### 2) Add a title to a node
+
+For example, to clarify why you are drawing attention to the director above, 'Tani, Monica'
+
+```{r titlenode}
+nodes$title <- ifelse(nodes$id=="Tani, Monica","This person is mentioned in a law enforcement case",NA)
+
+visNetwork(nodes = nodes,
+           edges = edges)
+```
+
+
+##### 3) Change the shape and size
+
+For example, to differenciate between companies (squares) and people (smaller triangles)
+
+```{r shape}
+nodes$shape <- ifelse(nodes$id %in% onecompany$companyname, "square",
+                      ifelse(nodes$id %in% onecompany$companyofficers, "triangle",NA)) # Diffferent shapes 
+
+nodes$size <- ifelse(nodes$id %in% onecompany$companyname, 24,
+                     ifelse(nodes$id %in% onecompany$companyofficers, 15, NA)) # Diffferent sizes
+
+visNetwork(nodes = nodes,
+           edges = edges)
+```
+
+##### 4) Change the shape to an icon
+
+Start by creating groups of nodes. We'll create 3 groups to represent the types of nodes relevant to us: 'companies', 'officers' and 'officerswithalert'. 
+
+```{r groups}
+nodes$group <- ifelse(nodes$id %in% onecompany$companyname, "companies",
+                      ifelse(nodes$id %in% onecompany$companyofficers & nodes$id=="Tani, Monica", 
+                             "officerswithalert",
+                             ifelse(nodes$id %in% onecompany$companyofficers,"officers",NA)))
+
+nodes <- select(nodes,-c(color,shape,size)) #remove these columns so the source of the shapes and colors corresponds to the new groups we created and not the old colours and shapes.
+
+nodes
+```
+
+You can pick the code of the icons you want to use in [fontawesome](https://fontawesome.com/icons?d=gallery)
+
+```{r networkicon}
+visNetwork(nodes = nodes,
+           edges = edges) %>%
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>% # For each groupname we:
+  # selected the shape to be an icon, indicated which icon using its code, and a gave color.
+  addFontAwesome() # The source of our icons
+```
+
+##### 5) Make one line dashed
+
+For example, because one of the 5 officers (Hoffpauir, Jordon) is no longer active in the company.
+
+```{r edgesdash}
+edges$dashes <- ifelse(edges$from == "Hoffpauir, Jordon", TRUE, FALSE)
+
+edges # Edge will be dashed where column shows TRUE
+
+visNetwork(nodes = nodes,
+           edges = edges) %>%
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>%
+  addFontAwesome()
+```
+
+##### 6) Add a title to identify your graph and a subtitle for additional details
+
+```{r addinfo}
+visNetwork(nodes = nodes,
+           edges = edges,
+           main = "The Corporate Network",
+           submain = "Source: Paraitepui.") %>%
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>%
+  addFontAwesome()
+```
+
+
+##### 7) Add a legend for your groups
+
+```{r legend}
+visNetwork(nodes = nodes,
+           edges = edges,
+           main = "The Corporate Network",
+           submain = "Source: Paraitepui.") %>%
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>%
+  addFontAwesome() %>%
+  visLegend(width = 0.04, position = "right") # Legend will be smaller and to the right
+```
+
+##### 8) Or add a custom legend
+
+We'll create data frames with the information the legend should show about our nodes and edges
+
+```{r legendcustom}
+lndnodes <- data.frame(label = c("Company", "Officer", "Officer with alert"), 
+                       shape = c("icon"),
+                       icon = list(face = "FontAwesome", # Source of the icons
+                                   code = c("f1ad","f007","f007"), # Icons for each group
+                                   color = c("#4C67BD","#4C67BD","#F2A918"))) # Colors for each group
+
+# Have a look at the data frame for the nodes legend
+lndnodes
+
+lndedges <- data.frame(label=c("Former officer", "Current officer"),
+                       dashes=c(TRUE,FALSE),
+                       color=c("#4C67BD"),
+                       arrows.to=FALSE, # Legend won't show arrows
+                       font.align="bottom") # Text will show below the edge in the legend
+
+# Have a look at the data frame for the edges legend
+lndedges
+```
+
+Draw the network with the custom legend
+```{r networkcustleg}
+visNetwork(nodes = nodes,
+           edges = edges,
+           main = "The Corporate Network",
+           submain = "Source: Paraitepui.") %>% 
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>%
+  addFontAwesome() %>%
+  visLegend(useGroups = FALSE, # Use custom legend instead of groups
+            position = "right",
+            addNodes = lndnodes,
+            addEdges = lndedges)
+```
+
+
+When your graph is ready, save it as an HTML file so you can share it.
+```{r save}
+mycorporatenetwork <- 
+  visNetwork(nodes = nodes,
+             edges = edges,
+             main = "The Corporate Network",
+             submain = "Source: Paraitepui.") %>%
+  visGroups(groupname = "companies", shape = "icon",
+            icon = list(code="f1ad",color="#4C67BD"))%>%
+  visGroups(groupname = "officers", shape="icon",
+            icon=list(code="f007",color="#4C67BD")) %>%
+  visGroups(groupname = "officerswithalert", shape="icon",
+            icon=list(code="f007",color="#F2A918")) %>%
+  addFontAwesome() %>%
+  visLegend(useGroups = FALSE, 
+            position = "right",
+            addNodes = lndnodes,
+            addEdges = lndedges)
+
+mycorporatenetwork
+
+visSave(mycorporatenetwork, "mynetwork01.html")
+```
