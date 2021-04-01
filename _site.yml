@@ -9,4 +9,3 @@ href: index.html
 href: mynetwork01.html
 output:
   html_document:
-  theme: cosmo
