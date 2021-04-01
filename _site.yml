@@ -1,0 +1,12 @@
+name: "Detect financial crime with R"
+output_dir: "docs"
+navbar:
+  title: "Detect financial crime with R"
+left:
+  - text: "Building corporate networks"
+href: index.html
+- text: "Building corporate networks"
+href: mynetwork01.html
+output:
+  html_document:
+  theme: cosmo
