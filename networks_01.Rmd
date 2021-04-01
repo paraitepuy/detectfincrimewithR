@@ -12,7 +12,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Displaying connections between companies, their directors and shareholders, is useful when investigating corruption, money laundering or illicit trade. Here you will find how to create interactive visualizations of corporate networks in R using [visNetwork](http://datastorm-open.github.io/visNetwork/).
+Displaying connections between companies, their directors and shareholders, is useful when investigating corruption, money laundering or illicit trade. 
+
+Here you will find how to create interactive visualizations of corporate networks in R using [visNetwork](http://datastorm-open.github.io/visNetwork/).
+
+If you have a little of previous experience with R, you're good to go.
 
 
 ### Our first network: 'Twill Erin Ltd.'
