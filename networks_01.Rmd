@@ -20,8 +20,8 @@ We will graph a corporate network, step by step, following an example. 'Twill Er
 We will use tidyverse to wrangle our data and visNetwork to display it.
 
 ```{r warning=FALSE,message=FALSE}
-library(visNetwork)
 library(tidyverse)
+library(visNetwork)
 ```
 
 We load our data into a data frame called 'onecompany':
